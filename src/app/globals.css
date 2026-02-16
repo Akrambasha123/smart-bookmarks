@@ -1,0 +1,205 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f8fc;
+  --text: #0f172a;
+  --muted-text: #475569;
+  --panel: #ffffff;
+  --panel-soft: #f8fafc;
+  --border: #d1d5db;
+  --ring: rgba(59, 130, 246, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --text: #e5e7eb;
+    --muted-text: #9ca3af;
+    --panel: #111827;
+    --panel-soft: #1f2937;
+    --border: #374151;
+    --ring: rgba(96, 165, 250, 0.38);
+  }
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app-bg {
+  background:
+    radial-gradient(1200px 600px at 12% -6%, rgba(59, 130, 246, 0.12), transparent 55%),
+    radial-gradient(900px 500px at 90% 10%, rgba(14, 165, 233, 0.1), transparent 52%),
+    radial-gradient(1000px 580px at 50% 120%, rgba(16, 185, 129, 0.08), transparent 56%),
+    linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 90%, #ffffff 10%) 100%);
+}
+
+.app-shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+.panel {
+  background: color-mix(in srgb, var(--panel) 94%, transparent 6%);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(2, 8, 23, 0.08);
+}
+
+.panel-soft {
+  background: color-mix(in srgb, var(--panel-soft) 92%, transparent 8%);
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+}
+
+.section-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-text);
+  font-weight: 700;
+}
+
+.body-muted {
+  color: var(--muted-text);
+}
+
+.input-base {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
+  padding: 0.65rem 0.9rem;
+}
+
+.input-base:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+@media (prefers-color-scheme: dark) {
+  .input-base {
+    background: #0f172a;
+    color: #e5e7eb;
+    border-color: #4b5563;
+  }
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.75rem;
+  padding: 0.62rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #2563eb;
+  transition: all 0.18s ease;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.75rem;
+  padding: 0.62rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 96%, transparent 4%);
+  transition: all 0.18s ease;
+}
+
+.btn-secondary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(2, 8, 23, 0.1);
+}
+
+.card-hover {
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(2, 8, 23, 0.12);
+}
+
+.fade-in-up {
+  animation: fadeInUp 260ms ease-out both;
+}
+
+.modal-overlay-enter {
+  animation: modalOverlayIn 180ms ease-out both;
+}
+
+.modal-overlay-leave {
+  animation: modalOverlayOut 160ms ease-in both;
+}
+
+.modal-card-enter {
+  animation: modalCardIn 220ms ease-out both;
+}
+
+.modal-card-leave {
+  animation: modalCardOut 160ms ease-in both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modalOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalOverlayOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes modalCardIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modalCardOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+}
