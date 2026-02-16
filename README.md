@@ -1,36 +1,196 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 Smart Bookmarks
 
-## Getting Started
+A modern, real-time bookmark manager built with **Next.js (App Router)** and **Supabase**.
 
-First, run the development server:
+🔗 **Live Demo:** https://YOUR-VERCEL-URL.vercel.app  
+📦 **GitHub Repo:** https://github.com/Akrambasha123/smart-bookmarks  
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## ✨ Features
+
+- 🔐 Google OAuth authentication (Supabase Auth only)
+- 👤 Private bookmarks per user (Row Level Security enforced)
+- ⚡ Real-time updates across multiple tabs
+- ➕ Add bookmarks (Title + URL)
+- 🗑 Delete bookmarks with confirmation modal
+- 🎨 Modern SaaS-style UI (Tailwind CSS)
+- 📊 Live total bookmarks counter
+- 🔎 Search and sorting
+- 🚀 Deployed on Vercel
+
+---
+
+## 🏗 Tech Stack
+
+| Layer | Technology |
+|--------|------------|
+| Frontend | Next.js 14+ (App Router) |
+| Styling | Tailwind CSS |
+| Backend | Supabase (Auth + Postgres + Realtime) |
+| Authentication | Google OAuth |
+| Database | PostgreSQL (Supabase managed) |
+| Hosting | Vercel |
+
+---
+
+## 🧠 Architecture Overview
+
+### 🔐 Authentication
+- Google OAuth handled via Supabase.
+- No email/password login allowed.
+- Supabase manages secure sessions and JWT.
+
+### 🗃 Database Structure
+
+```sql
+create table bookmarks (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users not null,
+  title text not null,
+  url text not null,
+  created_at timestamptz not null default now()
+);
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 🔒 Row Level Security (RLS)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sql
+alter table bookmarks enable row level security;
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+create policy "Users can view own bookmarks"
+on bookmarks for select
+using (auth.uid() = user_id);
 
-## Learn More
+create policy "Users can insert own bookmarks"
+on bookmarks for insert
+with check (auth.uid() = user_id);
 
-To learn more about Next.js, take a look at the following resources:
+create policy "Users can delete own bookmarks"
+on bookmarks for delete
+using (auth.uid() = user_id);
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This ensures complete user-level isolation.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## ⚡ Real-Time Functionality
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Supabase Realtime subscriptions listen for:
+- INSERT events
+- DELETE events
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This ensures:
+- Adding a bookmark in one tab appears instantly in another
+- Deleting updates all sessions in real time
+
+---
+
+## 📂 Project Structure
+
+```
+src/
+ ├── app/
+ │   ├── (auth)/login/
+ │   ├── dashboard/
+ │   ├── layout.tsx
+ │   └── page.tsx
+ ├── components/
+ ├── lib/
+ │   └── supabase/
+ └── types/
+```
+
+---
+
+## ⚙️ Environment Variables
+
+Create a `.env.local` file:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
+```
+
+---
+
+## 🚀 Local Setup
+
+```bash
+git clone https://github.com/Akrambasha123/smart-bookmarks.git
+cd smart-bookmarks
+npm install
+npm run dev
+```
+
+Visit:
+```
+http://localhost:3000
+```
+
+---
+
+## 🌍 Deployment
+
+Deployed on **Vercel**.
+
+Steps:
+1. Push code to GitHub
+2. Import project into Vercel
+3. Add environment variables
+4. Update Supabase URL Configuration
+5. Deploy
+
+---
+
+## 🛠 Challenges Faced & Solutions
+
+### 1️⃣ OAuth Redirect Issues  
+**Problem:** Google OAuth failed due to redirect mismatch.  
+**Solution:** Updated Supabase Site URL and Redirect URLs for both localhost and production.
+
+### 2️⃣ GitHub Authentication Errors  
+**Problem:** Push failed due to password authentication deprecation.  
+**Solution:** Used GitHub Personal Access Token (PAT).
+
+### 3️⃣ RLS Blocking Inserts  
+**Problem:** Inserts failed due to RLS enforcement.  
+**Solution:** Properly defined `auth.uid()` policies.
+
+### 4️⃣ UI Contrast & Background Issues  
+**Problem:** Background reduced readability.  
+**Solution:** Redesigned UI with modern gradient and better contrast.
+
+---
+
+## 🔮 Future Improvements
+
+- 🔖 Tagging / Categories
+- 📤 Export bookmarks (CSV/JSON)
+- 🌙 Enhanced dark mode
+- 🔎 Debounced search
+- 📱 Mobile UX refinement
+- 🔐 Role-based permissions
+
+---
+
+## 📌 Why This Project Matters
+
+This project demonstrates:
+
+- Secure authentication flows
+- Proper database isolation using RLS
+- Real-time data synchronization
+- Clean App Router architecture
+- Production deployment workflow
+
+---
+
+## 👨‍💻 Author
+
+**A Akram Basha**  
+Full Stack Developer  
+
+---
+
