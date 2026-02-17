@@ -5,6 +5,13 @@ import BookmarkForm from "@/components/BookmarkForm";
 import BookmarkList from "@/components/BookmarkList";
 import Header from "@/components/Header";
 
+type Bookmark = {
+  id: string;
+  title: string;
+  url: string;
+  created_at: string;
+};
+
 export default function DashboardShell({
   userId,
   userEmail,
@@ -12,7 +19,7 @@ export default function DashboardShell({
   userId: string;
   userEmail?: string;
 }) {
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [recentlyAddedBookmark, setRecentlyAddedBookmark] = useState<Bookmark | null>(null);
   const [bookmarkCount, setBookmarkCount] = useState(0);
 
   return (
@@ -24,7 +31,7 @@ export default function DashboardShell({
             Add new bookmark
           </h2>
           <div className="mt-4">
-            <BookmarkForm onBookmarkAdded={() => setRefreshKey((v) => v + 1)} />
+            <BookmarkForm onBookmarkAdded={(bookmark) => setRecentlyAddedBookmark(bookmark)} />
           </div>
         </section>
 
@@ -35,7 +42,7 @@ export default function DashboardShell({
           <div className="mt-4">
           <BookmarkList
             userId={userId}
-            refreshKey={refreshKey}
+            optimisticInsert={recentlyAddedBookmark}
             onCountChange={setBookmarkCount}
           />
           </div>

@@ -4,6 +4,13 @@ import { useMemo, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { useToast } from "@/components/ui/ToastProvider";
 
+type Bookmark = {
+  id: string;
+  title: string;
+  url: string;
+  created_at: string;
+};
+
 function normalizeUrl(input: string) {
   const trimmed = input.trim();
   if (!trimmed) return "";
@@ -31,7 +38,7 @@ function getUrlValidationMessage(input: string) {
 export default function BookmarkForm({
   onBookmarkAdded,
 }: {
-  onBookmarkAdded?: () => void;
+  onBookmarkAdded?: (bookmark: Bookmark) => void;
 }) {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
@@ -90,11 +97,16 @@ export default function BookmarkForm({
       return;
     }
 
-    const { error } = await supabase.from("bookmarks").insert({
-      title: title.trim(),
-      url: normalizedUrl,
-      user_id: user.id,
-    });
+    const { data, error } = await supabase
+      .from("bookmarks")
+      .insert({
+        title: title.trim(),
+        url: normalizedUrl,
+        user_id: user.id,
+      })
+      // Return inserted row so same-tab UI can update instantly even if INSERT event is delayed.
+      .select("id,title,url,created_at")
+      .single();
 
     if (error) {
       showToast({ title: "Could not save bookmark", description: error.message, type: "error" });
@@ -107,7 +119,7 @@ export default function BookmarkForm({
     setTitleError("");
     setUrlError("");
     showToast({ title: "Bookmark saved", description: "Your link is now synced.", type: "success" });
-    onBookmarkAdded?.();
+    if (data) onBookmarkAdded?.(data as Bookmark);
     setLoading(false);
   };
 

@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type {
+  RealtimeChannel,
+  RealtimePostgresChangesPayload,
+} from "@supabase/supabase-js";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { useToast } from "@/components/ui/ToastProvider";
 import ConfirmationModal from "@/components/ConfirmationModal";
@@ -14,11 +18,11 @@ type Bookmark = {
 
 export default function BookmarkList({
   userId,
-  refreshKey = 0,
+  optimisticInsert,
   onCountChange,
 }: {
   userId: string;
-  refreshKey?: number;
+  optimisticInsert?: Bookmark | null;
   onCountChange?: (count: number) => void;
 }) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -29,20 +33,34 @@ export default function BookmarkList({
   const [modalBookmark, setModalBookmark] = useState<Bookmark | null>(null);
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const { showToast } = useToast();
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const user = useMemo(() => (userId ? { id: userId } : null), [userId]);
 
   useEffect(() => {
     onCountChange?.(bookmarks.length);
   }, [bookmarks.length, onCountChange]);
 
   useEffect(() => {
-    let isMounted = true;
+    if (!optimisticInsert) return;
+    // Fast same-tab add. Realtime INSERT remains source for cross-tab/device sync.
+    setBookmarks((prev) => {
+      if (prev.some((item) => item.id === optimisticInsert.id)) return prev;
+      return [optimisticInsert, ...prev];
+    });
+  }, [optimisticInsert]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    const currentUserId = user.id;
+
+    let isMounted = true;
+    // Initial load only. Realtime handlers below keep state in sync afterwards.
     async function fetchBookmarks() {
       setLoading(true);
       const { data, error } = await supabase
         .from("bookmarks")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", currentUserId)
         .order("created_at", { ascending: false });
 
       if (!isMounted) return;
@@ -53,51 +71,104 @@ export default function BookmarkList({
           description: error.message,
           type: "error",
         });
+      } else {
+        setBookmarks(data || []);
       }
-      setBookmarks(data || []);
       setLoading(false);
     }
 
-    fetchBookmarks();
+    void fetchBookmarks();
+    return () => {
+      isMounted = false;
+    };
+    // Intentionally keyed by auth identity only, per realtime subscription requirement.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
-    // Keep all tabs in sync through Supabase realtime events.
+  useEffect(() => {
+    if (!user?.id) return;
+    const currentUserId = user.id;
+
+    // Ensure only one active channel for this component/user session.
+    if (channelRef.current) {
+      void supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    console.log("Realtime subscription mounted");
+
     const channel = supabase
-      .channel(`bookmarks-changes-${userId}`)
+      .channel(`bookmarks-changes-${currentUserId}`)
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "bookmarks",
-          filter: `user_id=eq.${userId}`,
+          filter: `user_id=eq.${currentUserId}`,
         },
-        (payload) => {
-          if (!isMounted) return;
-
-          if (payload.eventType === "INSERT") {
-            const incoming = payload.new as Bookmark;
-            setBookmarks((prev) => {
-              if (prev.some((item) => item.id === incoming.id)) return prev;
-              return [incoming, ...prev];
-            });
-          } else if (payload.eventType === "UPDATE") {
-            const incoming = payload.new as Bookmark;
-            setBookmarks((prev) =>
-              prev.map((item) => (item.id === incoming.id ? incoming : item))
-            );
-          } else if (payload.eventType === "DELETE") {
-            const deleted = payload.old as Bookmark;
-            setBookmarks((prev) => prev.filter((item) => item.id !== deleted.id));
-          }
+        (payload: RealtimePostgresChangesPayload<Bookmark>) => {
+          console.log("Realtime event:", payload);
+          const incoming = payload.new as Bookmark;
+          // Add new row immediately; guard against duplicates.
+          setBookmarks((prev) => {
+            if (prev.some((item) => item.id === incoming.id)) return prev;
+            return [incoming, ...prev];
+          });
         }
       )
-      .subscribe();
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "bookmarks",
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        (payload: RealtimePostgresChangesPayload<Bookmark>) => {
+          console.log("Realtime event:", payload);
+          const incoming = payload.new as Bookmark;
+          // Replace updated row immediately.
+          setBookmarks((prev) =>
+            prev.map((item) => (item.id === incoming.id ? incoming : item))
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "bookmarks",
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        (payload: RealtimePostgresChangesPayload<Bookmark>) => {
+          console.log("Realtime event:", payload);
+          const deleted = payload.old as Bookmark;
+          // Remove deleted row immediately.
+          setBookmarks((prev) => prev.filter((item) => item.id !== deleted.id));
+        }
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          showToast({
+            title: "Realtime disconnected",
+            description: "Bookmark sync is temporarily unavailable.",
+            type: "error",
+          });
+        }
+      });
+    channelRef.current = channel;
 
     return () => {
-      isMounted = false;
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        void supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-  }, [userId, supabase, refreshKey, showToast]);
+    // Intentionally keyed by auth identity only, per realtime subscription requirement.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const visibleBookmarks = useMemo(() => {
     const filtered = bookmarks.filter((bookmark) => {
